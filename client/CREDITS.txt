@@ -1,0 +1,2 @@
+UI Utils -- https://github.com/vfreitas-/bevy-quick-warrior
+Character Pixelart -- https://www.oryxdesignlab.com/products/wee-fantasy
