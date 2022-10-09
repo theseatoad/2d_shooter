@@ -14,13 +14,14 @@ impl Default for GameState {
     }
 }
 
+mod components;
 mod game;
 mod mainmenu;
-mod ui;
 mod player;
-mod components;
+mod ui;
 fn main() {
     App::new()
+        .insert_resource(ImageSettings::default_nearest())
         .insert_resource(WindowDescriptor {
             title: "2d_shooter".to_string(),
             width: 480.,
@@ -30,7 +31,6 @@ fn main() {
         })
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
-        .insert_resource(ImageSettings::default_nearest())
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_system(bevy::window::close_on_esc)
         .add_plugin(mainmenu::MainMenuPlugin)

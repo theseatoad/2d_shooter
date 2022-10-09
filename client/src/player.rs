@@ -1,4 +1,4 @@
-use bevy::{prelude::*, time::FixedTimestep};
+use bevy::{prelude::*, time::FixedTimestep, sprite::Anchor};
 
 use crate::{
     components::{Player, Position},
@@ -29,6 +29,11 @@ fn init_player(mut commands: Commands, asset_server: Res<AssetServer>) {
                     y: 0.0,
                     z: 10.0,
                 },
+                scale : Vec3 { x: 2., y: 2., z: 2. },
+                ..Default::default()
+            },
+            sprite: Sprite {
+                anchor: Anchor::BottomLeft,
                 ..Default::default()
             },
             ..Default::default()
@@ -56,7 +61,7 @@ fn move_player(keyboard_input: Res<Input<KeyCode>>, mut query: Query<&mut Transf
     // x: -210, 210
     // y : -160, 120,
     let mut new_player_position = transform.translation + move_input.extend(0.) * PLAYERSPEED * time.delta_seconds();
-    new_player_position.x = new_player_position.x.clamp(-210., 210.);
-    new_player_position.y = new_player_position.y.clamp(-160., 120.);
+    new_player_position.x = new_player_position.x.clamp(-220., 185.);
+    new_player_position.y = new_player_position.y.clamp(-180., 100.);
     transform.translation = new_player_position;
 }
