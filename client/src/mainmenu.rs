@@ -61,7 +61,7 @@ impl Plugin for MainMenuPlugin {
 }
 
 fn spawn_ui(asset_server: Res<AssetServer>, mut commands: Commands) {
-    asset_server.load_folder("mainmenu").unwrap();
+    let _loaded = asset_server.load_folder("mainmenu").unwrap();
     commands
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -307,7 +307,7 @@ fn animate_text(
     hover_state: Res<State<HoverState>>,
 ) {
     for mut text in text_query.iter_mut() {
-        if text.sections[f0].value == String::from("Play game") {
+        if text.sections[0].value == String::from("Play game") {
             if hover_state.current() == &HoverState::PlayGame {
                 text.sections[0].style.color = LIGHTCOLOR;
             } else {

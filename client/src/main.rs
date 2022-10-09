@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::texture::ImageSettings, time::FixedTimestep};
+use bevy::{prelude::*, render::texture::ImageSettings};
 use bevy_inspector_egui::WorldInspectorPlugin;
 const TIME_STEP: f32 = 1.0 / 60.0;
 
@@ -17,6 +17,8 @@ impl Default for GameState {
 mod game;
 mod mainmenu;
 mod ui;
+mod player;
+mod components;
 fn main() {
     App::new()
         .insert_resource(WindowDescriptor {
