@@ -10,19 +10,40 @@ pub struct Player;
 pub struct Position(pub Vec2);
 
 #[derive(Component)]
-pub struct Direction(pub EDirection);
+pub struct SpriteDirection(pub ESpriteDirection);
 
 #[derive(Debug, PartialEq)]
-pub enum EDirection {
+pub enum ESpriteDirection {
     UP,
-    LEFT,
+    RIGHT,
     DOWN,
-    RIGHT
+    LEFT
 }
 
-impl Default for EDirection {
-    fn default() -> EDirection {
-        EDirection::RIGHT
+impl Default for ESpriteDirection {
+    fn default() -> ESpriteDirection {
+        ESpriteDirection::RIGHT
+    }
+}
+
+#[derive(Component)]
+pub struct AttackDirection(pub EMovementDirection);
+
+#[derive(Debug, PartialEq)]
+pub enum EMovementDirection {
+    UP,
+    UPRIGHT,
+    UPLEFT,
+    RIGHT,
+    DOWN,
+    DOWNRIGHT,
+    DOWNLEFT,
+    LEFT
+}
+
+impl Default for EMovementDirection {
+    fn default() -> EMovementDirection {
+        EMovementDirection::RIGHT
     }
 }
 
@@ -45,3 +66,6 @@ impl Default for ECharacterState {
 
 #[derive(Component, Deref, DerefMut)]
 pub struct AnimationTimer(pub Timer);
+
+#[derive(Component, Deref, DerefMut)]
+pub struct AttackTimer(pub Timer);

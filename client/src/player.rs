@@ -3,21 +3,29 @@ use std::time::Duration;
 use bevy::{prelude::*, time::FixedTimestep};
 
 use crate::{
-    components::{AnimationTimer, CharacterState, Direction, ECharacterState, EDirection, Player},
-    TIME_STEP,
+    components::{
+        AnimationTimer, AttackDirection, AttackTimer, CharacterState, ECharacterState,
+        EMovementDirection, ESpriteDirection, Player, SpriteDirection,
+    },
+    GameState, TIME_STEP,
 };
 pub struct PlayerPlugin;
 
 pub const PLAYERSPEED: f32 = 100.;
+// IN SECONDS
+pub const ATTACK_ANIM_SPEED : f32 = 0.10;
+pub const IDLE_ANIM_SPEED : f32 = 0.25;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(init_player).add_system_set(
-            SystemSet::new()
-                .with_run_criteria(FixedTimestep::step(TIME_STEP as f64))
-                .with_system(move_player)
-                .with_system(animate_sprite),
-        );
+        app.add_system_set(SystemSet::on_enter(GameState::InGame).with_system(init_player))
+            .add_system_set(
+                SystemSet::on_update(GameState::InGame)
+                    .with_run_criteria(FixedTimestep::step(TIME_STEP as f64))
+                    .with_system(player_move)
+                    .with_system(animate_sprite)
+                    .with_system(player_attack.after(player_move)),
+            );
     }
 }
 
@@ -45,52 +53,62 @@ fn init_player(
             ..default()
         })
         .insert(Player)
-        .insert(Direction(EDirection::default()))
+        .insert(SpriteDirection(ESpriteDirection::default()))
+        .insert(AttackDirection(EMovementDirection::default()))
         .insert(CharacterState(ECharacterState::default()))
-        .insert(AnimationTimer(Timer::from_seconds(0.25, true)));
+        .insert(AnimationTimer(Timer::from_seconds(IDLE_ANIM_SPEED, true)))
+        .insert(AttackTimer(Timer::from_seconds(ATTACK_ANIM_SPEED, true)));
 }
 
-fn move_player(
+fn player_move(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<
-        (
-            &mut Transform,
-            &mut Direction,
-            &mut AnimationTimer,
-        ),
-        With<Player>,
-    >,
+    mut query: Query<(&mut Transform, &mut SpriteDirection, &mut AttackDirection), With<Player>>,
     time: Res<Time>,
 ) {
-    for (mut transform, mut direction, mut timer) in &mut query {
+    for (mut transform, mut sprite_direction, mut attack_direction) in &mut query {
         let mut move_input: Vec2 = Vec2::ZERO;
-        if keyboard_input.pressed(KeyCode::W) || keyboard_input.just_released(KeyCode::Up) {
+        if keyboard_input.pressed(KeyCode::W) {
             move_input.y = 1.;
-            if direction.0 != EDirection::UP {
-                direction.0 = EDirection::UP;
-                timer.0.set_elapsed(Duration::from_secs(20));
-            }
+            sprite_direction.0 = ESpriteDirection::UP;
         }
-        if keyboard_input.pressed(KeyCode::S) || keyboard_input.just_released(KeyCode::Down) {
+        if keyboard_input.pressed(KeyCode::S) {
             move_input.y = -1.;
-            if direction.0 != EDirection::DOWN {
-                direction.0 = EDirection::DOWN;
-                timer.0.set_elapsed(Duration::from_secs(20));
-            }
+            sprite_direction.0 = ESpriteDirection::DOWN;
         }
-        if keyboard_input.pressed(KeyCode::A) || keyboard_input.just_released(KeyCode::Left) {
+        if keyboard_input.pressed(KeyCode::A) {
             move_input.x = -1.;
-            if direction.0 != EDirection::LEFT {
-                direction.0 = EDirection::LEFT;
-                timer.0.set_elapsed(Duration::from_secs(20));
-            }
+            sprite_direction.0 = ESpriteDirection::LEFT;
         }
-        if keyboard_input.pressed(KeyCode::D) || keyboard_input.just_released(KeyCode::Right) {
+        if keyboard_input.pressed(KeyCode::D) {
             move_input.x = 1.;
-            if direction.0 != EDirection::RIGHT {
-                direction.0 = EDirection::RIGHT;
-                timer.0.set_elapsed(Duration::from_secs(20));
+            sprite_direction.0 = ESpriteDirection::RIGHT;
+        }
+
+        // "Default" for attack direction since it is dependent on the sprite direction for the non-movement case.
+        if move_input.x == 0. && move_input.y == 0. {
+            match sprite_direction.0 {
+                ESpriteDirection::UP => attack_direction.0 = EMovementDirection::UP,
+                ESpriteDirection::RIGHT => attack_direction.0 = EMovementDirection::RIGHT,
+                ESpriteDirection::DOWN => attack_direction.0 = EMovementDirection::DOWN,
+                ESpriteDirection::LEFT => attack_direction.0 = EMovementDirection::LEFT,
             }
+            // These will be clockwise (to make sure I cover all cases. Would be better to have a type so we can ensure through match it is exhaustive.)
+        } else if move_input.x == 0. && move_input.y == 1. {
+            attack_direction.0 = EMovementDirection::UP;
+        } else if move_input.x == 1. && move_input.y == 1. {
+            attack_direction.0 = EMovementDirection::UPRIGHT;
+        } else if move_input.x == 1. && move_input.y == 0. {
+            attack_direction.0 = EMovementDirection::RIGHT;
+        } else if move_input.x == 1. && move_input.y == -1. {
+            attack_direction.0 = EMovementDirection::DOWNRIGHT;
+        } else if move_input.x == 0. && move_input.y == -1. {
+            attack_direction.0 = EMovementDirection::DOWN;
+        } else if move_input.x == -1. && move_input.y == -1. {
+            attack_direction.0 = EMovementDirection::DOWNLEFT;
+        } else if move_input.x == -1. && move_input.y == 0. {
+            attack_direction.0 = EMovementDirection::LEFT;
+        } else if move_input.x == -1. && move_input.y == 1. {
+            attack_direction.0 = EMovementDirection::UPLEFT;
         }
         // Arena bounds
         // x: -210, 210
@@ -100,7 +118,43 @@ fn move_player(
         new_player_position.x = new_player_position.x.clamp(-220., 185.);
         new_player_position.y = new_player_position.y.clamp(-180., 100.);
         transform.translation = new_player_position;
-    };
+    }
+}
+
+fn player_attack(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<
+        (
+            &Transform,
+            &AttackDirection,
+            &mut AttackTimer,
+            &mut CharacterState,
+        ),
+        With<Player>,
+    >,
+    time: Res<Time>,
+) {
+    for (transform, attack_direciton, mut timer, mut character_state) in &mut query {
+        println!("Character State : {:?}", character_state.0);
+        if character_state.0 == ECharacterState::ATTACK {
+            timer.tick(time.delta());
+            println!("{:?}", timer.elapsed());
+        }
+        if timer.just_finished() {
+            //Makes sure to update the attack state (Useful for syncing animations and if player can attack again)
+            if character_state.0 == ECharacterState::ATTACK {
+                character_state.0 = ECharacterState::IDLE;
+            }
+        }
+        //Means it can attack
+        if character_state.0 == ECharacterState::IDLE && keyboard_input.pressed(KeyCode::Space) {
+            character_state.0 = ECharacterState::ATTACK;
+            timer.reset();
+        }
+        if character_state.0 == ECharacterState::ATTACK {
+            println!("ATTACKING")
+        }
+    }
 }
 
 fn animate_sprite(
@@ -109,77 +163,135 @@ fn animate_sprite(
         (
             &mut AnimationTimer,
             &mut TextureAtlasSprite,
-            &crate::components::Direction,
+            &crate::components::SpriteDirection,
             &CharacterState,
         ),
         With<Player>,
     >,
 ) {
-    for (mut timer, mut sprite, direction, character_state) in &mut query {
+    for (mut timer, mut sprite, sprite_direction, character_state) in &mut query {
+        let mut next_sprite = false;
         timer.tick(time.delta());
         if timer.just_finished() {
-            match direction.0 {
-                EDirection::LEFT => {
-                    if character_state.0 == ECharacterState::IDLE {
-                        if sprite.index != 22 {
-                            sprite.index = 22;
-                        } else {
-                            sprite.index = 24;
-                        }
-                    } else if character_state.0 == ECharacterState::ATTACK {
-                        if sprite.index == 0 {
-                            sprite.index = 2;
-                        } else {
-                            sprite.index = 0;
-                        }
-                    };
-                }
-                EDirection::RIGHT => {
-                    if character_state.0 == ECharacterState::IDLE {
-                        if sprite.index != 26 {
-                            sprite.index = 26;
-                        } else {
-                            sprite.index = 28;
-                        }
-                    } else if character_state.0 == ECharacterState::ATTACK {
-                        if sprite.index == 0 {
-                            sprite.index = 2;
-                        } else {
-                            sprite.index = 0;
-                        }
-                    };
-                }
-                EDirection::UP => {
-                    if character_state.0 == ECharacterState::IDLE {
-                        if sprite.index != 30 {
-                            sprite.index = 30;
-                        } else {
-                            sprite.index = 32;
-                        }
-                    } else if character_state.0 == ECharacterState::ATTACK {
-                        if sprite.index == 0 {
-                            sprite.index = 2;
-                        } else {
-                            sprite.index = 0;
-                        }
-                    };
-                }
-                EDirection::DOWN => {
-                    if character_state.0 == ECharacterState::IDLE {
-                        if sprite.index != 18 {
-                            sprite.index = 18;
-                        } else {
-                            sprite.index = 20;
-                        }
-                    } else if character_state.0 == ECharacterState::ATTACK {
-                        if sprite.index == 0 {
-                            sprite.index = 2;
-                        } else {
-                            sprite.index = 0;
-                        }
-                    };
-                }
-            };
+            next_sprite = true;
         }
+        match sprite_direction.0 {
+            ESpriteDirection::LEFT => {
+                if character_state.0 == ECharacterState::IDLE {
+                    //Sets to first sprite instantly.
+                    if sprite.index != 22 && sprite.index != 24 {
+                        sprite.index = 22;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(IDLE_ANIM_SPEED));
+                    }
+                    // Sets (typically second) to first.
+                    else if sprite.index != 22 && next_sprite {
+                        sprite.index = 22;
+                    // Sets the first to second.
+                    } else if sprite.index == 22 && next_sprite {
+                        sprite.index = 24;
+                    }
+                } else if character_state.0 == ECharacterState::ATTACK {
+                    //Sets to first sprite instantly.
+                    if sprite.index != 4 && sprite.index != 6 {
+                        sprite.index = 4;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(ATTACK_ANIM_SPEED));
+                    }
+                    // Sets (typically second) to first.
+                    else if sprite.index != 4 && next_sprite {
+                        sprite.index = 4;
+                    }
+                    // Sets the first to second.
+                    else if sprite.index == 4 && next_sprite {
+                        sprite.index = 6;
+                    }
+                };
+            }
+            ESpriteDirection::RIGHT => {
+                if character_state.0 == ECharacterState::IDLE {
+                    if sprite.index != 26 && sprite.index != 28 {
+                        sprite.index = 26;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(IDLE_ANIM_SPEED));
+                    } else if sprite.index != 26 && next_sprite {
+                        sprite.index = 26;
+                    } else if sprite.index == 26 && next_sprite {
+                        sprite.index = 28;
+                    }
+                } else if character_state.0 == ECharacterState::ATTACK {
+                    //Sets to first sprite instantly.
+                    if sprite.index != 8 && sprite.index != 10 {
+                        sprite.index = 8;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(ATTACK_ANIM_SPEED));
+                    }
+                    // Sets (typically second) to first.
+                    else if sprite.index != 8 && next_sprite {
+                        sprite.index = 8;
+                    }
+                    // Sets the first to second.
+                    else if sprite.index == 8 && next_sprite {
+                        sprite.index = 10;
+                    }
+                };
+            }
+            ESpriteDirection::UP => {
+                if character_state.0 == ECharacterState::IDLE {
+                    if sprite.index != 30 && sprite.index != 32 {
+                        sprite.index = 30;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(IDLE_ANIM_SPEED));
+                    } else if sprite.index != 30 && next_sprite {
+                        sprite.index = 30;
+                    } else if sprite.index == 30 && next_sprite {
+                        sprite.index = 32;
+                    }
+                } else if character_state.0 == ECharacterState::ATTACK {
+                    //Sets to first sprite instantly.
+                    if sprite.index != 12 && sprite.index != 14 {
+                        sprite.index = 12;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(ATTACK_ANIM_SPEED));
+                    }
+                    // Sets (typically second) to first.
+                    else if sprite.index != 12 && next_sprite {
+                        sprite.index = 12;
+                    }
+                    // Sets the first to second.
+                    else if sprite.index == 12 && next_sprite {
+                        sprite.index = 14;
+                    }
+                };
+            }
+            ESpriteDirection::DOWN => {
+                if character_state.0 == ECharacterState::IDLE {
+                    if sprite.index != 18 && sprite.index != 20 {
+                        sprite.index = 18;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(IDLE_ANIM_SPEED));
+                     } else if sprite.index != 18 && next_sprite {
+                        sprite.index = 18;
+                    } else if sprite.index == 18 && next_sprite {
+                        sprite.index = 20;
+                    }
+                } else if character_state.0 == ECharacterState::ATTACK {
+                    //Sets to first sprite instantly.
+                    if sprite.index != 0 && sprite.index != 2 {
+                        sprite.index = 0;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(ATTACK_ANIM_SPEED));
+                    }
+                    // Sets (typically second) to first.
+                    else if sprite.index != 0 && next_sprite {
+                        sprite.index = 0;
+                    }
+                    // Sets the first to second.
+                    else if sprite.index == 0 && next_sprite {
+                        sprite.index = 2;
+                    }
+                };
+            }
+        };
     }
 }
