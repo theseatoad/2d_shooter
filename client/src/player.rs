@@ -3,18 +3,20 @@ use std::time::Duration;
 use bevy::{prelude::*, time::FixedTimestep};
 
 use crate::{
+    assets::GameAssets,
     components::{
         AnimationTimer, AttackDirection, AttackTimer, CharacterState, ECharacterState,
         EMovementDirection, ESpriteDirection, Player, SpriteDirection,
     },
+    projectiles::ArcherArrow,
     GameState, TIME_STEP,
 };
 pub struct PlayerPlugin;
 
 pub const PLAYERSPEED: f32 = 100.;
 // IN SECONDS
-pub const ATTACK_ANIM_SPEED : f32 = 0.10;
-pub const IDLE_ANIM_SPEED : f32 = 0.25;
+pub const ATTACK_ANIM_SPEED: f32 = 0.10;
+pub const IDLE_ANIM_SPEED: f32 = 0.25;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
@@ -29,27 +31,23 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn init_player(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    let _loaded = asset_server.load_folder("game/characters/archer");
-    //Note that every other is empty
-    let texture_handle = asset_server.get_handle("game/characters/archer/spritesheet.png");
-    let texture_atlas = TextureAtlas::from_grid_with_padding(
-        texture_handle,
-        Vec2::new(10.0, 10.0),
-        33,
-        1,
-        Vec2::new(0.0, 0.),
-        Vec2::new(5.0, 5.0),
-    );
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+fn init_player(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands
         .spawn_bundle(SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            transform: Transform::from_scale(Vec3::splat(2.0)),
+            texture_atlas: game_assets.archer_tileset.clone(),
+            transform: Transform {
+                translation: Vec3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 1.0,
+                },
+                scale: Vec3 {
+                    x: 2.0,
+                    y: 2.0,
+                    z: 2.0,
+                },
+                ..default()
+            },
             ..default()
         })
         .insert(Player)
@@ -122,6 +120,7 @@ fn player_move(
 }
 
 fn player_attack(
+    mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<
         (
@@ -133,16 +132,21 @@ fn player_attack(
         With<Player>,
     >,
     time: Res<Time>,
+    game_assets: Res<GameAssets>,
 ) {
-    for (transform, attack_direciton, mut timer, mut character_state) in &mut query {
-        println!("Character State : {:?}", character_state.0);
+    for (transform, attack_direction, mut timer, mut character_state) in &mut query {
         if character_state.0 == ECharacterState::ATTACK {
             timer.tick(time.delta());
-            println!("{:?}", timer.elapsed());
         }
         if timer.just_finished() {
             //Makes sure to update the attack state (Useful for syncing animations and if player can attack again)
             if character_state.0 == ECharacterState::ATTACK {
+                commands.spawn_bundle(ArcherArrow::new(
+                    1.0,
+                    &transform.translation,
+                    &attack_direction.0,
+                    &game_assets.archer_arrows,
+                ));
                 character_state.0 = ECharacterState::IDLE;
             }
         }
@@ -150,9 +154,6 @@ fn player_attack(
         if character_state.0 == ECharacterState::IDLE && keyboard_input.pressed(KeyCode::Space) {
             character_state.0 = ECharacterState::ATTACK;
             timer.reset();
-        }
-        if character_state.0 == ECharacterState::ATTACK {
-            println!("ATTACKING")
         }
     }
 }
@@ -179,21 +180,49 @@ fn animate_sprite(
             ESpriteDirection::LEFT => {
                 if character_state.0 == ECharacterState::IDLE {
                     //Sets to first sprite instantly.
-                    if sprite.index != 22 && sprite.index != 24 {
-                        sprite.index = 22;
+                    if sprite.index != 11 && sprite.index != 12 {
+                        sprite.index = 11;
                         timer.reset();
                         timer.set_duration(Duration::from_secs_f32(IDLE_ANIM_SPEED));
                     }
                     // Sets (typically second) to first.
-                    else if sprite.index != 22 && next_sprite {
-                        sprite.index = 22;
+                    else if sprite.index != 11 && next_sprite {
+                        sprite.index = 11;
                     // Sets the first to second.
-                    } else if sprite.index == 22 && next_sprite {
-                        sprite.index = 24;
+                    } else if sprite.index == 11 && next_sprite {
+                        sprite.index = 12;
                     }
                 } else if character_state.0 == ECharacterState::ATTACK {
                     //Sets to first sprite instantly.
-                    if sprite.index != 4 && sprite.index != 6 {
+                    if sprite.index != 2 && sprite.index != 3 {
+                        sprite.index = 2;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(ATTACK_ANIM_SPEED));
+                    }
+                    // Sets (typically second) to first.
+                    else if sprite.index != 2 && next_sprite {
+                        sprite.index = 2;
+                    }
+                    // Sets the first to second.
+                    else if sprite.index == 2 && next_sprite {
+                        sprite.index = 3;
+                    }
+                };
+            }
+            ESpriteDirection::RIGHT => {
+                if character_state.0 == ECharacterState::IDLE {
+                    if sprite.index != 13 && sprite.index != 14 {
+                        sprite.index = 13;
+                        timer.reset();
+                        timer.set_duration(Duration::from_secs_f32(IDLE_ANIM_SPEED));
+                    } else if sprite.index != 13 && next_sprite {
+                        sprite.index = 13;
+                    } else if sprite.index == 13 && next_sprite {
+                        sprite.index = 14;
+                    }
+                } else if character_state.0 == ECharacterState::ATTACK {
+                    //Sets to first sprite instantly.
+                    if sprite.index != 4 && sprite.index != 5 {
                         sprite.index = 4;
                         timer.reset();
                         timer.set_duration(Duration::from_secs_f32(ATTACK_ANIM_SPEED));
@@ -204,80 +233,52 @@ fn animate_sprite(
                     }
                     // Sets the first to second.
                     else if sprite.index == 4 && next_sprite {
-                        sprite.index = 6;
-                    }
-                };
-            }
-            ESpriteDirection::RIGHT => {
-                if character_state.0 == ECharacterState::IDLE {
-                    if sprite.index != 26 && sprite.index != 28 {
-                        sprite.index = 26;
-                        timer.reset();
-                        timer.set_duration(Duration::from_secs_f32(IDLE_ANIM_SPEED));
-                    } else if sprite.index != 26 && next_sprite {
-                        sprite.index = 26;
-                    } else if sprite.index == 26 && next_sprite {
-                        sprite.index = 28;
-                    }
-                } else if character_state.0 == ECharacterState::ATTACK {
-                    //Sets to first sprite instantly.
-                    if sprite.index != 8 && sprite.index != 10 {
-                        sprite.index = 8;
-                        timer.reset();
-                        timer.set_duration(Duration::from_secs_f32(ATTACK_ANIM_SPEED));
-                    }
-                    // Sets (typically second) to first.
-                    else if sprite.index != 8 && next_sprite {
-                        sprite.index = 8;
-                    }
-                    // Sets the first to second.
-                    else if sprite.index == 8 && next_sprite {
-                        sprite.index = 10;
+                        sprite.index = 5;
                     }
                 };
             }
             ESpriteDirection::UP => {
                 if character_state.0 == ECharacterState::IDLE {
-                    if sprite.index != 30 && sprite.index != 32 {
-                        sprite.index = 30;
+                    if sprite.index != 15 && sprite.index != 16 {
+                        sprite.index = 15;
                         timer.reset();
                         timer.set_duration(Duration::from_secs_f32(IDLE_ANIM_SPEED));
-                    } else if sprite.index != 30 && next_sprite {
-                        sprite.index = 30;
-                    } else if sprite.index == 30 && next_sprite {
-                        sprite.index = 32;
+                    } else if sprite.index != 15 && next_sprite {
+                        sprite.index = 15;
+                    } else if sprite.index == 15 && next_sprite {
+                        sprite.index = 16;
                     }
                 } else if character_state.0 == ECharacterState::ATTACK {
                     //Sets to first sprite instantly.
-                    if sprite.index != 12 && sprite.index != 14 {
-                        sprite.index = 12;
+                    if sprite.index != 6 && sprite.index != 7 {
+                        sprite.index = 6;
                         timer.reset();
                         timer.set_duration(Duration::from_secs_f32(ATTACK_ANIM_SPEED));
                     }
                     // Sets (typically second) to first.
-                    else if sprite.index != 12 && next_sprite {
-                        sprite.index = 12;
+                    else if sprite.index != 6 && next_sprite {
+                        sprite.index = 6;
                     }
                     // Sets the first to second.
-                    else if sprite.index == 12 && next_sprite {
-                        sprite.index = 14;
+                    else if sprite.index == 6 && next_sprite {
+                        sprite.index = 7;
                     }
                 };
             }
             ESpriteDirection::DOWN => {
                 if character_state.0 == ECharacterState::IDLE {
-                    if sprite.index != 18 && sprite.index != 20 {
-                        sprite.index = 18;
+                    if sprite.index != 9 && sprite.index != 10 {
+                        sprite.index = 9;
                         timer.reset();
                         timer.set_duration(Duration::from_secs_f32(IDLE_ANIM_SPEED));
-                     } else if sprite.index != 18 && next_sprite {
-                        sprite.index = 18;
-                    } else if sprite.index == 18 && next_sprite {
-                        sprite.index = 20;
+                    } else if sprite.index != 9 && next_sprite {
+                        sprite.index = 9;
+                    } else if sprite.index == 9 && next_sprite {
+                        sprite.index = 10;
                     }
                 } else if character_state.0 == ECharacterState::ATTACK {
                     //Sets to first sprite instantly.
-                    if sprite.index != 0 && sprite.index != 2 {
+                    if sprite.index != 0 && sprite.index != 1 {
                         sprite.index = 0;
                         timer.reset();
                         timer.set_duration(Duration::from_secs_f32(ATTACK_ANIM_SPEED));
@@ -288,7 +289,7 @@ fn animate_sprite(
                     }
                     // Sets the first to second.
                     else if sprite.index == 0 && next_sprite {
-                        sprite.index = 2;
+                        sprite.index = 1;
                     }
                 };
             }

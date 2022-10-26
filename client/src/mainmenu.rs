@@ -1,6 +1,10 @@
 use bevy::{app::AppExit, prelude::*};
 
-use crate::{ui::utils::basic_text, GameState};
+use crate::{
+    assets::MainMenuAssets,
+    ui::utils::basic_text,
+    GameState,
+};
 pub struct MainMenuPlugin;
 
 #[derive(Component, Default, Clone)]
@@ -60,8 +64,7 @@ impl Plugin for MainMenuPlugin {
     }
 }
 
-fn spawn_ui(asset_server: Res<AssetServer>, mut commands: Commands) {
-    let _loaded = asset_server.load_folder("mainmenu").unwrap();
+fn spawn_ui(mut commands: Commands, mm_assets: Res<MainMenuAssets>) {
     commands
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -76,7 +79,7 @@ fn spawn_ui(asset_server: Res<AssetServer>, mut commands: Commands) {
         })
         .insert(OnlyInMainMenu)
         .with_children(|root| {
-            let font = asset_server.get_handle("mainmenu/alagrad.ttf");
+            let font = mm_assets.alagrad.clone();
 
             root.spawn_bundle(NodeBundle {
                 style: Style {
@@ -91,7 +94,7 @@ fn spawn_ui(asset_server: Res<AssetServer>, mut commands: Commands) {
             })
             .with_children(|parent| {
                 parent.spawn_bundle(ImageBundle {
-                    image: UiImage(asset_server.get_handle("mainmenu/mainmenuscreen.png")),
+                    image: UiImage(mm_assets.main_menu_screen.clone()),
                     style: Style {
                         size: Size::new(Val::Px(480.), Val::Px(384.)),
                         ..Default::default()
@@ -134,7 +137,6 @@ fn spawn_ui(asset_server: Res<AssetServer>, mut commands: Commands) {
 
 fn ui_controls(
     keyboard_input: Res<Input<KeyCode>>,
-    asset_server: Res<AssetServer>,
     mut game_state: ResMut<State<GameState>>,
     mut main_menu_state: ResMut<State<MainMenuState>>,
     mut hover_state: ResMut<State<HoverState>>,
@@ -143,6 +145,7 @@ fn ui_controls(
     mut app_exit_events: EventWriter<AppExit>,
     audio: Res<Audio>,
     mut commands: Commands,
+    mm_assets: Res<MainMenuAssets>,
 ) {
     let credit_entity = credits_query.get_single_mut();
     if main_menu_state.current() == &MainMenuState::SplashScreen {
@@ -150,15 +153,15 @@ fn ui_controls(
             match hover_state.current() {
                 HoverState::PlayGame => {
                     hover_state.set(HoverState::Credits).unwrap();
-                    audio.play(asset_server.load("mainmenu/ui_button.ogg"));
+                    audio.play(mm_assets.ui_button.clone());
                 }
                 HoverState::Credits => {
                     hover_state.set(HoverState::Quit).unwrap();
-                    audio.play(asset_server.load("mainmenu/ui_button.ogg"));
+                    audio.play(mm_assets.ui_button.clone());
                 }
                 HoverState::Quit => {
                     hover_state.set(HoverState::PlayGame).unwrap();
-                    audio.play(asset_server.load("mainmenu/ui_button.ogg"));
+                    audio.play(mm_assets.ui_button.clone());
                 }
             }
         }
@@ -166,15 +169,15 @@ fn ui_controls(
             match hover_state.current() {
                 HoverState::PlayGame => {
                     hover_state.set(HoverState::Quit).unwrap();
-                    audio.play(asset_server.load("mainmenu/ui_button.ogg"));
+                    audio.play(mm_assets.ui_button.clone());
                 }
                 HoverState::Credits => {
                     hover_state.set(HoverState::PlayGame).unwrap();
-                    audio.play(asset_server.load("mainmenu/ui_button.ogg"));
+                    audio.play(mm_assets.ui_button.clone());
                 }
                 HoverState::Quit => {
                     hover_state.set(HoverState::Credits).unwrap();
-                    audio.play(asset_server.load("mainmenu/ui_button.ogg"));
+                    audio.play(mm_assets.ui_button.clone());
                 }
             }
         }
@@ -203,11 +206,10 @@ fn ui_controls(
                         })
                         .insert(OnlyInCredits)
                         .with_children(|root| {
-                            let font = asset_server.get_handle("mainmenu/alagrad.ttf");
                             root.spawn_bundle(basic_text(
                                 "In CREDITS.txt. Return to exit.",
                                 10.,
-                                font.clone(),
+                                mm_assets.alagrad.clone(),
                                 None,
                                 None,
                                 None,
@@ -244,8 +246,6 @@ fn ui_controls(
                 })
                 .insert(OnlyInMainMenu)
                 .with_children(|root| {
-                    let font = asset_server.load("mainmenu/alagrad.ttf");
-
                     root.spawn_bundle(NodeBundle {
                         style: Style {
                             position_type: PositionType::Absolute,
@@ -259,7 +259,7 @@ fn ui_controls(
                     })
                     .with_children(|parent| {
                         parent.spawn_bundle(ImageBundle {
-                            image: UiImage(asset_server.load("mainmenu/mainmenuscreen.png")),
+                            image: UiImage(mm_assets.main_menu_screen.clone()),
                             style: Style {
                                 size: Size::new(Val::Px(480.), Val::Px(384.)),
                                 ..Default::default()
@@ -270,7 +270,7 @@ fn ui_controls(
                     root.spawn_bundle(basic_text(
                         "Play game",
                         24.,
-                        font.clone(),
+                        mm_assets.alagrad.clone(),
                         Some(70.),
                         None,
                         None,
@@ -280,7 +280,7 @@ fn ui_controls(
                     root.spawn_bundle(basic_text(
                         "Credits",
                         24.,
-                        font.clone(),
+                        mm_assets.alagrad.clone(),
                         Some(20.),
                         None,
                         None,
@@ -290,7 +290,7 @@ fn ui_controls(
                     root.spawn_bundle(basic_text(
                         "Quit",
                         24.,
-                        font.clone(),
+                        mm_assets.alagrad.clone(),
                         Some(20.),
                         None,
                         None,

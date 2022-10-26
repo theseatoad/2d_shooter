@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{player::PlayerPlugin, GameState};
+use crate::{player::PlayerPlugin, GameState, assets::GameAssets};
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
@@ -10,15 +10,15 @@ impl Plugin for GamePlugin {
     }
 }
 
-fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_map(mut commands: Commands, game_assets : Res<GameAssets>) {
     // Spawn edge tiles
     commands.spawn_bundle(SpriteBundle {
-        texture: asset_server.load("game/arenascreen.png"),
-        transform : Transform {
-            translation : Vec3 {
-                x : 0.0,
-                y : 0.0,
-                z : 0.0,
+        texture: game_assets.arena_background.clone(),
+        transform: Transform {
+            translation: Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
             },
             ..Default::default()
         },

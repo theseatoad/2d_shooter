@@ -69,3 +69,6 @@ pub struct AnimationTimer(pub Timer);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct AttackTimer(pub Timer);
+
+#[derive(Component)]
+pub struct Collider;
