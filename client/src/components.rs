@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::projectiles::ProjectileMask;
+
 #[derive(Component)]
 pub struct Velocity(pub Vec2);
 
@@ -72,3 +74,6 @@ pub struct AttackTimer(pub Timer);
 
 #[derive(Component)]
 pub struct Collider;
+
+#[derive(Component)]
+pub struct Projectile(pub ProjectileMask);

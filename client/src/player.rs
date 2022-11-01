@@ -12,7 +12,7 @@ use crate::{
     GameState, TIME_STEP,
 };
 pub struct PlayerPlugin;
-
+pub const ARCHER_PROJECTILE_SPEED : f32 = 500.;
 pub const PLAYERSPEED: f32 = 100.;
 // IN SECONDS
 pub const ATTACK_ANIM_SPEED: f32 = 0.10;
@@ -113,8 +113,8 @@ fn player_move(
         // y : -160, 120,
         let mut new_player_position =
             transform.translation + move_input.extend(0.) * PLAYERSPEED * time.delta_seconds();
-        new_player_position.x = new_player_position.x.clamp(-220., 185.);
-        new_player_position.y = new_player_position.y.clamp(-180., 100.);
+        new_player_position.x = new_player_position.x.clamp(-210., 210.);
+        new_player_position.y = new_player_position.y.clamp(-160., 120.);
         transform.translation = new_player_position;
     }
 }
@@ -142,7 +142,7 @@ fn player_attack(
             //Makes sure to update the attack state (Useful for syncing animations and if player can attack again)
             if character_state.0 == ECharacterState::ATTACK {
                 commands.spawn_bundle(ArcherArrow::new(
-                    1.0,
+                    ARCHER_PROJECTILE_SPEED,
                     &transform.translation,
                     &attack_direction.0,
                     &game_assets.archer_arrows,
