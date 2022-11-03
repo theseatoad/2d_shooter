@@ -14,6 +14,12 @@ pub struct Position(pub Vec2);
 #[derive(Component)]
 pub struct SpriteDirection(pub ESpriteDirection);
 
+impl Default for ESpriteDirection {
+    fn default() -> ESpriteDirection {
+        ESpriteDirection::DOWN
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ESpriteDirection {
     UP,
@@ -22,47 +28,40 @@ pub enum ESpriteDirection {
     LEFT
 }
 
-impl Default for ESpriteDirection {
-    fn default() -> ESpriteDirection {
-        ESpriteDirection::RIGHT
-    }
-}
-
-#[derive(Component)]
-pub struct AttackDirection(pub EMovementDirection);
+#[derive(Debug, Component)]
+pub struct CharacterState(pub (ECharacterMovementState, ECharacterAttackState));
 
 #[derive(Debug, PartialEq)]
-pub enum EMovementDirection {
-    UP,
-    UPRIGHT,
-    UPLEFT,
-    RIGHT,
-    DOWN,
-    DOWNRIGHT,
-    DOWNLEFT,
-    LEFT
-}
-
-impl Default for EMovementDirection {
-    fn default() -> EMovementDirection {
-        EMovementDirection::RIGHT
-    }
-}
-
-#[derive(Component)]
-pub struct CharacterState(pub ECharacterState);
-
-
-#[derive(Debug, PartialEq)]
-pub enum ECharacterState {
+pub enum ECharacterMovementState {
     IDLE,
-    ATTACK,
-    DEAD
+    WALK_UP,
+    WALK_RIGHT,
+    WALK_DOWN,
+    WALK_LEFT
 }
 
-impl Default for ECharacterState {
-    fn default() -> ECharacterState {
-        ECharacterState::IDLE
+impl Default for ECharacterMovementState {
+    fn default() -> ECharacterMovementState {
+        ECharacterMovementState::IDLE
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ECharacterAttackState {
+    IDLE,
+    ATTACK_UP,
+    ATTACK_UPRIGHT,
+    ATTACK_UPLEFT,
+    ATTACK_RIGHT,
+    ATTACK_DOWN,
+    ATTACK_DOWNRIGHT,
+    ATTACK_DOWNLEFT,
+    ATTACK_LEFT,
+}
+
+impl Default for ECharacterAttackState {
+    fn default() -> ECharacterAttackState {
+        ECharacterAttackState::IDLE
     }
 }
 

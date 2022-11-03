@@ -24,6 +24,7 @@ mod player;
 mod ui;
 mod projectiles;
 mod assets;
+mod animation;
 fn main() {
     App::new()
         .insert_resource(ImageSettings::default_nearest())

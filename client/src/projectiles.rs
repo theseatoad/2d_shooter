@@ -1,7 +1,8 @@
 use bevy::{prelude::*, time::FixedTimestep};
 
 use crate::{
-    components::{Collider, EMovementDirection, Projectile, Velocity},
+    components::{Collider, ECharacterAttackState, Projectile, Velocity},
+    game::{MAP_DOWN_BOUND, MAP_LEFT_BOUND, MAP_RIGHT_BOUND, MAP_UP_BOUND},
     GameState, TIME_STEP,
 };
 
@@ -30,52 +31,58 @@ impl ArcherArrow {
     pub fn new(
         speed: f32,
         location: &Vec3,
-        arrow_direction: &EMovementDirection,
+        arrow_direction: &ECharacterAttackState,
         arrow_handle_images: &Vec<Handle<Image>>,
     ) -> ArcherArrow {
         let a_velocity: Vec2;
         let arrow_texture: Handle<Image>;
         let flip_x: bool;
         match arrow_direction {
-            EMovementDirection::UP => {
+            ECharacterAttackState::ATTACK_UP => {
                 a_velocity = Vec2 { x: 0.0, y: 1.0 } * speed;
                 arrow_texture = arrow_handle_images.get(2).unwrap().clone();
                 flip_x = false;
             }
-            EMovementDirection::UPRIGHT => {
+            ECharacterAttackState::ATTACK_UPRIGHT => {
                 a_velocity = Vec2 { x: 0.66, y: 0.66 } * speed;
                 arrow_texture = arrow_handle_images.get(1).unwrap().clone();
                 flip_x = true;
             }
-            EMovementDirection::UPLEFT => {
+            ECharacterAttackState::ATTACK_UPLEFT => {
                 a_velocity = Vec2 { x: -0.66, y: 0.66 } * speed;
                 arrow_texture = arrow_handle_images.get(1).unwrap().clone();
                 flip_x = false;
             }
-            EMovementDirection::RIGHT => {
+            ECharacterAttackState::ATTACK_RIGHT => {
                 a_velocity = Vec2 { x: 1.0, y: 0.0 } * speed;
                 arrow_texture = arrow_handle_images.get(0).unwrap().clone();
                 flip_x = false;
             }
-            EMovementDirection::DOWN => {
+            ECharacterAttackState::ATTACK_DOWN => {
                 a_velocity = Vec2 { x: 0.0, y: -1.0 } * speed;
                 arrow_texture = arrow_handle_images.get(2).unwrap().clone();
                 flip_x = false;
             }
-            EMovementDirection::DOWNRIGHT => {
+            ECharacterAttackState::ATTACK_DOWNRIGHT => {
                 a_velocity = Vec2 { x: 0.6, y: -0.6 } * speed;
                 arrow_texture = arrow_handle_images.get(1).unwrap().clone();
                 flip_x = false;
             }
-            EMovementDirection::DOWNLEFT => {
+            ECharacterAttackState::ATTACK_DOWNLEFT => {
                 a_velocity = Vec2 { x: -0.6, y: -0.6 } * speed;
                 arrow_texture = arrow_handle_images.get(1).unwrap().clone();
                 flip_x = true;
             }
-            EMovementDirection::LEFT => {
+            ECharacterAttackState::ATTACK_LEFT => {
                 a_velocity = Vec2 { x: -1.0, y: 0.0 } * speed;
                 arrow_texture = arrow_handle_images.get(0).unwrap().clone();
                 flip_x = false;
+            }
+            ECharacterAttackState::IDLE => {
+               /* It should never get here. */
+               a_velocity = Vec2 { x: -1.0, y: 0.0 } * speed;
+               arrow_texture = arrow_handle_images.get(0).unwrap().clone();
+               flip_x = false;
             }
         };
         ArcherArrow {
@@ -84,7 +91,7 @@ impl ArcherArrow {
                     translation: Vec3 {
                         x: location.x,
                         y: location.y,
-                        z: location.z + 1.0,
+                        z: location.z - 0.1,
                     },
                     scale: Vec3 {
                         x: 2.0,
@@ -135,15 +142,12 @@ fn check_projectile_collisions(
 ) {
     // Kill projectiles that are on or over border of map.
     for (entity, projectile_transform) in &mut query {
-        // Arena bounds
-        // x: -210, 210
-        // y : -160, 120,
-        if projectile_transform.translation.x >= 210.0
-            || projectile_transform.translation.x <= -210.0
+        if projectile_transform.translation.x >= MAP_RIGHT_BOUND
+            || projectile_transform.translation.x <= MAP_LEFT_BOUND
         {
             commands.entity(entity).despawn_recursive();
-        } else if projectile_transform.translation.y >= 120.0
-            || projectile_transform.translation.y <= -160.0
+        } else if projectile_transform.translation.y >= MAP_UP_BOUND
+            || projectile_transform.translation.y <= MAP_DOWN_BOUND
         {
             commands.entity(entity).despawn_recursive();
         }
