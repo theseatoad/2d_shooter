@@ -109,6 +109,7 @@ fn player_attack(
     mut query: Query<(&Transform, &mut AttackTimer, &mut CharacterState), With<Player>>,
     time: Res<Time>,
     game_assets: Res<GameAssets>,
+    audio: Res<Audio>
 ) {
     for (transform, mut timer, mut character_state) in &mut query {
         if character_state.0 .1 != ECharacterAttackState::IDLE {
@@ -172,6 +173,7 @@ fn player_attack(
                     &character_state.0 .1,
                     &game_assets.archer_arrows,
                 ));
+                audio.play(game_assets.arrow_noise.clone());
             }
         }
     }

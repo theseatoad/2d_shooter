@@ -10,6 +10,8 @@ pub struct GameAssets {
     #[asset(texture_atlas(tile_size_x = 10., tile_size_y = 10., columns = 17, rows = 1))]
     #[asset(path = "game/characters/archer/archer_spritesheet.png")]
     pub archer_tileset: Handle<TextureAtlas>,
+    #[asset(path = "game/characters/archer/arrow_noise.ogg")]
+    pub arrow_noise: Handle<AudioSource>,
 }
 
 #[derive(AssetCollection)]
